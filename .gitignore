@@ -1,0 +1,19 @@
+# Docker
+.env
+
+# Laravel
+backend/.env
+backend/vendor/
+backend/storage/logs/*.log
+
+# Node
+game/node_modules/
+game/dist/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

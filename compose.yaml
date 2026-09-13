@@ -1,0 +1,115 @@
+name: salary-defense
+
+services:
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: salary-defense-nginx
+
+    ports:
+      - "${APP_PORT:-8080}:80"
+
+    volumes:
+      - ./backend:/var/www/backend
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+    depends_on:
+      - php
+
+    restart: unless-stopped
+
+
+  php:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+
+    container_name: salary-defense-php
+
+    working_dir: /var/www/backend
+
+    volumes:
+      - ./backend:/var/www/backend
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+
+  mysql:
+    image: mysql:8.4
+    container_name: salary-defense-mysql
+
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} || exit 1"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    restart: unless-stopped
+
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: salary-defense-redis
+
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+    restart: unless-stopped
+
+
+  node:
+    image: node:lts-alpine
+    container_name: salary-defense-node
+
+    working_dir: /app
+
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+
+    volumes:
+      - ./game:/app
+
+    command: npm run dev -- --host 0.0.0.0
+
+    restart: unless-stopped
+
+
+volumes:
+  mysql-data:
+  redis-data:

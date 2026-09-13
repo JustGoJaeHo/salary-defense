@@ -1,0 +1,13 @@
+.git
+.gitignore
+
+.env
+
+backend/vendor
+backend/storage/logs
+
+game/node_modules
+game/dist
+
+.vscode
+.idea
