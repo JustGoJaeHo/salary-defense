@@ -1,18 +1,6 @@
 import './style.css'
 import Phaser from 'phaser'
-
-class MainScene extends Phaser.Scene {
-  create() {
-    this.cameras.main.setBackgroundColor('#1d2230')
-
-    this.add
-      .text(this.scale.width / 2, this.scale.height / 2, 'Salary Defense', {
-        fontSize: '48px',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5)
-  }
-}
+import { MainScene } from './scenes/MainScene'
 
 new Phaser.Game({
   type: Phaser.AUTO,
