@@ -4,7 +4,7 @@ import { WAVES } from '../game/waves'
 import { Enemy } from '../game/Enemy'
 import { Tower, TOWER_COST } from '../game/Tower'
 import { Projectile } from '../game/Projectile'
-import { snapToGrid, distanceToPath } from '../game/grid'
+import { GRID_SIZE, snapToGrid, distanceToPath } from '../game/grid'
 import { submitGameResult } from '../api/gameResults'
 
 const PLAYER_LIVES = 10
@@ -27,6 +27,7 @@ export class MainScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#1d2230')
+    this.drawPlacementGrid()
     this.drawPath()
     this.createHud()
     this.startWave(this.waveIndex)
@@ -146,6 +147,29 @@ export class MainScene extends Phaser.Scene {
       }
     }
     this.projectiles = remaining
+  }
+
+  private drawPlacementGrid(): void {
+    const graphics = this.add.graphics()
+    graphics.fillStyle(0x2ecc71, 0.12)
+    graphics.lineStyle(1, 0x2ecc71, 0.35)
+
+    const cols = Math.ceil(this.scale.width / GRID_SIZE)
+    const rows = Math.ceil(this.scale.height / GRID_SIZE)
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const cellX = col * GRID_SIZE
+        const cellY = row * GRID_SIZE
+        const centerX = cellX + GRID_SIZE / 2
+        const centerY = cellY + GRID_SIZE / 2
+
+        if (distanceToPath(centerX, centerY, PATH_WAYPOINTS) < PATH_CLEARANCE) continue
+
+        graphics.fillRect(cellX, cellY, GRID_SIZE, GRID_SIZE)
+        graphics.strokeRect(cellX, cellY, GRID_SIZE, GRID_SIZE)
+      }
+    }
   }
 
   private drawPath(): void {
