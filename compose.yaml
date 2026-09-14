@@ -23,6 +23,9 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      args:
+        WWWUSER: ${WWWUSER:-1000}
+        WWWGROUP: ${WWWGROUP:-1000}
 
     container_name: salary-defense-php
 
