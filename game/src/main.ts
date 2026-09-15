@@ -1,5 +1,8 @@
 import './style.css'
 import Phaser from 'phaser'
+import { PreloadScene } from './scenes/PreloadScene'
+import { AuthScene } from './scenes/AuthScene'
+import { LobbyScene } from './scenes/LobbyScene'
 import { MainScene } from './scenes/MainScene'
 
 new Phaser.Game({
@@ -12,5 +15,5 @@ new Phaser.Game({
     width: 540,
     height: 960,
   },
-  scene: MainScene,
+  scene: [PreloadScene, AuthScene, LobbyScene, MainScene],
 })

@@ -20,20 +20,30 @@ export class MainScene extends Phaser.Scene {
   private gold = STARTING_GOLD
   private wavesCompleted = false
   private gameOver = false
+  private paused = false
 
   private livesText!: Phaser.GameObjects.Text
   private goldText!: Phaser.GameObjects.Text
   private waveText!: Phaser.GameObjects.Text
+  private pauseButtonText!: Phaser.GameObjects.Text
+
+  constructor() {
+    super('Main')
+  }
 
   create(): void {
+    this.resetState()
     this.cameras.main.setBackgroundColor('#1d2230')
     this.drawPlacementGrid()
     this.drawPath()
     this.createHud()
+    this.createPauseButton()
+    this.createQuitButton()
     this.startWave(this.waveIndex)
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.gameOver) return
+      if (this.paused) return
       if (this.gold < TOWER_COST) return
 
       const cell = snapToGrid(pointer.x, pointer.y)
@@ -48,6 +58,7 @@ export class MainScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number): void {
     if (this.gameOver) return
+    if (this.paused) return
 
     const deltaSeconds = deltaMs / 1000
 
@@ -56,6 +67,19 @@ export class MainScene extends Phaser.Scene {
 
     this.updateTowers(deltaMs)
     this.updateProjectiles(deltaSeconds)
+  }
+
+  private resetState(): void {
+    this.enemies = []
+    this.towers = []
+    this.projectiles = []
+    this.waveIndex = 0
+    this.lives = PLAYER_LIVES
+    this.gold = STARTING_GOLD
+    this.wavesCompleted = false
+    this.gameOver = false
+    this.paused = false
+    this.time.paused = false
   }
 
   private createHud(): void {
@@ -70,6 +94,60 @@ export class MainScene extends Phaser.Scene {
     this.goldText.setText(`Gold: ${this.gold}`)
     const currentWave = Math.min(this.waveIndex + 1, WAVES.length)
     this.waveText.setText(`Wave: ${currentWave}/${WAVES.length}`)
+  }
+
+  private createPauseButton(): void {
+    const width = 100
+    const height = 44
+    const x = this.scale.width - width / 2 - 16
+    const y = this.scale.height - height / 2 - 16
+
+    const background = this.add.rectangle(x, y, width, height, 0x2f3644, 0.9)
+    background.setStrokeStyle(1, 0x4a5468)
+    background.setDepth(1000)
+    background.setInteractive({ useHandCursor: true })
+    background.on(
+      'pointerdown',
+      (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation()
+        this.togglePause()
+      },
+    )
+
+    this.pauseButtonText = this.add.text(x, y, '일시정지', { fontSize: '16px', color: '#ffffff' })
+    this.pauseButtonText.setOrigin(0.5)
+    this.pauseButtonText.setDepth(1001)
+  }
+
+  private togglePause(): void {
+    if (this.gameOver) return
+
+    this.paused = !this.paused
+    this.time.paused = this.paused
+    this.pauseButtonText.setText(this.paused ? '재시작' : '일시정지')
+  }
+
+  private createQuitButton(): void {
+    const width = 100
+    const height = 44
+    const x = this.scale.width - width / 2 - 16 - (width + 8)
+    const y = this.scale.height - height / 2 - 16
+
+    const background = this.add.rectangle(x, y, width, height, 0x2f3644, 0.9)
+    background.setStrokeStyle(1, 0x4a5468)
+    background.setDepth(1000)
+    background.setInteractive({ useHandCursor: true })
+    background.on(
+      'pointerdown',
+      (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation()
+        this.scene.start('Lobby')
+      },
+    )
+
+    const text = this.add.text(x, y, '게임종료', { fontSize: '16px', color: '#ffffff' })
+    text.setOrigin(0.5)
+    text.setDepth(1001)
   }
 
   private updateEnemies(deltaSeconds: number): void {
