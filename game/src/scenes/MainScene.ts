@@ -39,21 +39,8 @@ export class MainScene extends Phaser.Scene {
     this.createHud()
     this.createPauseButton()
     this.createQuitButton()
+    this.createSpawnButton()
     this.startWave(this.waveIndex)
-
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-      if (this.gameOver) return
-      if (this.paused) return
-      if (this.gold < TOWER_COST) return
-
-      const cell = snapToGrid(pointer.x, pointer.y)
-      if (distanceToPath(cell.x, cell.y, PATH_WAYPOINTS) < PATH_CLEARANCE) return
-      if (this.isCellOccupied(cell)) return
-
-      this.gold -= TOWER_COST
-      this.towers.push(new Tower(this, cell.x, cell.y))
-      this.refreshHud()
-    })
   }
 
   update(_time: number, deltaMs: number): void {
@@ -150,6 +137,101 @@ export class MainScene extends Phaser.Scene {
     text.setDepth(1001)
   }
 
+  private createSpawnButton(): void {
+    const width = 100
+    const height = 44
+    const x = this.scale.width / 2
+    const y = this.scale.height - height / 2 - 16
+
+    const background = this.add.rectangle(x, y, width, height, 0x2f3644, 0.9)
+    background.setStrokeStyle(1, 0x4a5468)
+    background.setDepth(1000)
+    background.setInteractive({ useHandCursor: true })
+    background.on(
+      'pointerdown',
+      (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation()
+        this.spawnTower()
+      },
+    )
+
+    const text = this.add.text(x, y, '생성', { fontSize: '16px', color: '#ffffff' })
+    text.setOrigin(0.5)
+    text.setDepth(1001)
+  }
+
+  private spawnTower(): void {
+    if (this.gameOver) return
+    if (this.paused) return
+    if (this.gold < TOWER_COST) return
+
+    const cell = this.findSpawnCell()
+    if (!cell) return
+
+    this.gold -= TOWER_COST
+    const tower = new Tower(this, cell.x, cell.y)
+    this.towers.push(tower)
+    this.makeDraggable(tower)
+    this.refreshHud()
+  }
+
+  private findSpawnCell(): Point | null {
+    const cols = Math.ceil(this.scale.width / GRID_SIZE)
+    const rows = Math.ceil(this.scale.height / GRID_SIZE)
+
+    let closest: Point | null = null
+    let closestDistance = Infinity
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const centerX = col * GRID_SIZE + GRID_SIZE / 2
+        const centerY = row * GRID_SIZE + GRID_SIZE / 2
+        const distance = distanceToPath(centerX, centerY, PATH_WAYPOINTS)
+
+        if (distance < PATH_CLEARANCE) continue
+        if (this.isCellOccupied({ x: centerX, y: centerY })) continue
+        if (distance < closestDistance) {
+          closestDistance = distance
+          closest = { x: centerX, y: centerY }
+        }
+      }
+    }
+
+    return closest
+  }
+
+  private makeDraggable(tower: Tower): void {
+    const graphic = tower.graphic
+    graphic.setInteractive({ useHandCursor: true })
+    this.input.setDraggable(graphic)
+
+    let originX = graphic.x
+    let originY = graphic.y
+
+    graphic.on('dragstart', () => {
+      originX = graphic.x
+      originY = graphic.y
+    })
+
+    graphic.on('drag', (_pointer: Phaser.Input.Pointer, dragX: number, dragY: number) => {
+      graphic.x = dragX
+      graphic.y = dragY
+    })
+
+    graphic.on('dragend', () => {
+      const cell = snapToGrid(graphic.x, graphic.y)
+      const blocked = distanceToPath(cell.x, cell.y, PATH_WAYPOINTS) < PATH_CLEARANCE
+      const occupied = this.isCellOccupied(cell, tower)
+
+      if (blocked || occupied) {
+        graphic.setPosition(originX, originY)
+        return
+      }
+
+      graphic.setPosition(cell.x, cell.y)
+    })
+  }
+
   private updateEnemies(deltaSeconds: number): void {
     for (const enemy of this.enemies) {
       enemy.update(deltaSeconds)
@@ -199,8 +281,10 @@ export class MainScene extends Phaser.Scene {
     })
   }
 
-  private isCellOccupied(cell: Point): boolean {
-    return this.towers.some((tower) => tower.graphic.x === cell.x && tower.graphic.y === cell.y)
+  private isCellOccupied(cell: Point, exclude?: Tower): boolean {
+    return this.towers.some(
+      (tower) => tower !== exclude && tower.graphic.x === cell.x && tower.graphic.y === cell.y,
+    )
   }
 
   private updateTowers(deltaMs: number): void {
