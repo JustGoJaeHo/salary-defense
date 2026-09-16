@@ -35,6 +35,9 @@ class GoogleAuthController extends Controller
     {
         $driver = Socialite::driver('google')->stateless();
 
+        // stateless() 모드는 Socialite의 자체 CSRF state 검증을 비활성화하므로,
+        // OAuth `state` 파라미터는 CSRF 방지 용도가 아니라 게스트 연동 티켓을
+        // 왕복 전달하는 용도로 자유롭게 사용됩니다.
         if ($request->query('ticket')) {
             $driver->with(['state' => $request->query('ticket')]);
         }
@@ -44,6 +47,7 @@ class GoogleAuthController extends Controller
 
     public function callback(Request $request): View
     {
+        // redirect() 참고: `state`는 CSRF 토큰이 아니라 게스트 연동 티켓입니다.
         $guestToLink = $this->googleAuthService->resolveLinkTicket($request->query('state'));
 
         try {

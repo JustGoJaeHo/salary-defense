@@ -6,12 +6,14 @@ import { Tower, TOWER_COST } from '../game/Tower'
 import { Projectile } from '../game/Projectile'
 import { GRID_SIZE, snapToGrid, distanceToPath } from '../game/grid'
 import { submitGameResult } from '../api/gameResults'
+import { loadSession, type AuthSession } from '../auth/session'
 
 const PLAYER_LIVES = 10
 const STARTING_GOLD = 100
 const PATH_CLEARANCE = 30
 
 export class MainScene extends Phaser.Scene {
+  private session!: AuthSession
   private enemies: Enemy[] = []
   private towers: Tower[] = []
   private projectiles: Projectile[] = []
@@ -32,6 +34,13 @@ export class MainScene extends Phaser.Scene {
   }
 
   create(): void {
+    const session = loadSession()
+    if (!session) {
+      this.scene.start('Auth')
+      return
+    }
+    this.session = session
+
     this.resetState()
     this.cameras.main.setBackgroundColor('#1d2230')
     this.drawPlacementGrid()
@@ -274,9 +283,8 @@ export class MainScene extends Phaser.Scene {
 
     const cleared = message === 'VICTORY'
     const waveReached = Math.min(this.waveIndex + 1, WAVES.length)
-    const nickname = window.prompt('닉네임을 입력하세요', 'Guest')?.trim() || 'Guest'
 
-    submitGameResult({ nickname, cleared, waveReached }).catch((error) => {
+    submitGameResult({ cleared, waveReached }, this.session.token).catch((error) => {
       console.error('Failed to submit game result', error)
     })
   }
