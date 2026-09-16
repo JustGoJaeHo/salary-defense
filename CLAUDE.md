@@ -177,7 +177,7 @@ Prefer:
 - framework conventions over custom mechanisms
 - existing project structure and naming
 - the smallest change required for the task
-- comments only when intent is not obvious
+- comments only when intent is not obvious, written in Korean
 
 Avoid:
 - clever one-liners

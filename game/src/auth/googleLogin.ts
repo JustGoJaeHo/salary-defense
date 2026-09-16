@@ -1,7 +1,6 @@
 import { getGoogleRedirectUrl } from '../api/auth'
+import { API_ORIGIN } from '../config'
 import type { AuthSession, AuthUser } from './session'
-
-const API_ORIGIN = 'http://localhost:8081'
 
 interface GoogleAuthMessage {
   type: 'google-auth'

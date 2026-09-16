@@ -23,7 +23,6 @@ class StoreGameResultRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nickname' => ['required', 'string', 'max:20'],
             'cleared' => ['required', 'boolean'],
             'wave_reached' => ['required', 'integer', 'min:0'],
         ];

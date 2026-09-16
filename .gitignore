@@ -9,6 +9,7 @@ backend/storage/logs/*.log
 # Node
 game/node_modules/
 game/dist/
+game/.env
 
 # IDE
 .idea/
