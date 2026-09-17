@@ -10,6 +10,6 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start('Auth')
+    this.scene.start('Splash')
   }
 }

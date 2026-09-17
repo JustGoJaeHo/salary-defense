@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { loginAsGuest } from '../api/auth'
 import { openGoogleLoginPopup } from '../auth/googleLogin'
-import { loadSession, saveSession } from '../auth/session'
+import { loadSession, saveSession, type AuthSession } from '../auth/session'
 
 export class AuthScene extends Phaser.Scene {
   private statusText?: Phaser.GameObjects.Text
@@ -11,11 +11,6 @@ export class AuthScene extends Phaser.Scene {
   }
 
   create(): void {
-    if (loadSession()) {
-      this.scene.start('Lobby')
-      return
-    }
-
     this.cameras.main.setBackgroundColor('#1d2230')
 
     this.add
@@ -32,8 +27,37 @@ export class AuthScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    this.createGuestButton()
-    this.createGoogleButton()
+    const session = loadSession()
+    if (session) {
+      this.createWelcomeText(session)
+      this.createEnterButton()
+    } else {
+      this.createGuestButton()
+      this.createGoogleButton()
+    }
+  }
+
+  private createWelcomeText(session: AuthSession): void {
+    this.add
+      .text(this.scale.width / 2, this.scale.height / 2 - 40, `${session.user.name}님 환영합니다`, {
+        fontSize: '16px',
+        color: '#c7ccd6',
+      })
+      .setOrigin(0.5)
+  }
+
+  private createEnterButton(): void {
+    const width = 220
+    const height = 52
+    const x = this.scale.width / 2
+    const y = this.scale.height / 2
+
+    const background = this.add.rectangle(x, y, width, height, 0x2ecc71, 0.9)
+    background.setStrokeStyle(1, 0x4a5468)
+    background.setInteractive({ useHandCursor: true })
+    background.on('pointerdown', () => this.scene.start('Lobby'))
+
+    this.add.text(x, y, '접속하기', { fontSize: '20px', color: '#0f1115' }).setOrigin(0.5)
   }
 
   private createGuestButton(): void {
