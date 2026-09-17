@@ -32,4 +32,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(GameResult::class);
     }
+
+    public function levelClears(): HasMany
+    {
+        return $this->hasMany(LevelClear::class);
+    }
 }

@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '../config'
 
 export interface GameResultPayload {
+  levelId: number
   cleared: boolean
   waveReached: number
 }
@@ -13,6 +14,7 @@ export async function submitGameResult(payload: GameResultPayload, token: string
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
+      level_id: payload.levelId,
       cleared: payload.cleared,
       wave_reached: payload.waveReached,
     }),

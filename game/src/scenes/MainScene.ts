@@ -1,19 +1,26 @@
 import Phaser from 'phaser'
 import { PATH_WAYPOINTS, type Point } from '../game/path'
-import { WAVES } from '../game/waves'
+import type { WaveConfig } from '../game/waves'
 import { Enemy } from '../game/Enemy'
 import { Tower, TOWER_COST } from '../game/Tower'
 import { Projectile } from '../game/Projectile'
 import { GRID_SIZE, snapToGrid, distanceToPath } from '../game/grid'
 import { submitGameResult } from '../api/gameResults'
+import { fetchLevel } from '../api/levels'
 import { loadSession, type AuthSession } from '../auth/session'
 
 const PLAYER_LIVES = 10
 const STARTING_GOLD = 100
 const PATH_CLEARANCE = 30
 
+interface MainSceneData {
+  levelId: number
+}
+
 export class MainScene extends Phaser.Scene {
   private session!: AuthSession
+  private levelId!: number
+  private waves: WaveConfig[] = []
   private enemies: Enemy[] = []
   private towers: Tower[] = []
   private projectiles: Projectile[] = []
@@ -23,7 +30,9 @@ export class MainScene extends Phaser.Scene {
   private wavesCompleted = false
   private gameOver = false
   private paused = false
+  private ready = false
 
+  private statusText?: Phaser.GameObjects.Text
   private livesText!: Phaser.GameObjects.Text
   private goldText!: Phaser.GameObjects.Text
   private waveText!: Phaser.GameObjects.Text
@@ -31,6 +40,10 @@ export class MainScene extends Phaser.Scene {
 
   constructor() {
     super('Main')
+  }
+
+  init(data: MainSceneData): void {
+    this.levelId = data.levelId
   }
 
   create(): void {
@@ -41,8 +54,31 @@ export class MainScene extends Phaser.Scene {
     }
     this.session = session
 
-    this.resetState()
     this.cameras.main.setBackgroundColor('#1d2230')
+    this.statusText = this.add
+      .text(this.scale.width / 2, this.scale.height / 2, '불러오는 중...', {
+        fontSize: '16px',
+        color: '#c7ccd6',
+      })
+      .setOrigin(0.5)
+
+    this.loadLevel()
+  }
+
+  private async loadLevel(): Promise<void> {
+    try {
+      const level = await fetchLevel(this.levelId, this.session.token)
+      this.waves = level.waves
+      this.statusText?.destroy()
+      this.startGame()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '게임 정보를 불러오지 못했습니다.'
+      this.statusText?.setText(message)
+    }
+  }
+
+  private startGame(): void {
+    this.resetState()
     this.drawPlacementGrid()
     this.drawPath()
     this.createHud()
@@ -50,9 +86,11 @@ export class MainScene extends Phaser.Scene {
     this.createQuitButton()
     this.createSpawnButton()
     this.startWave(this.waveIndex)
+    this.ready = true
   }
 
   update(_time: number, deltaMs: number): void {
+    if (!this.ready) return
     if (this.gameOver) return
     if (this.paused) return
 
@@ -75,6 +113,7 @@ export class MainScene extends Phaser.Scene {
     this.wavesCompleted = false
     this.gameOver = false
     this.paused = false
+    this.ready = false
     this.time.paused = false
   }
 
@@ -88,8 +127,8 @@ export class MainScene extends Phaser.Scene {
   private refreshHud(): void {
     this.livesText.setText(`Lives: ${this.lives}`)
     this.goldText.setText(`Gold: ${this.gold}`)
-    const currentWave = Math.min(this.waveIndex + 1, WAVES.length)
-    this.waveText.setText(`Wave: ${currentWave}/${WAVES.length}`)
+    const currentWave = Math.min(this.waveIndex + 1, this.waves.length)
+    this.waveText.setText(`Wave: ${currentWave}/${this.waves.length}`)
   }
 
   private createPauseButton(): void {
@@ -282,9 +321,9 @@ export class MainScene extends Phaser.Scene {
       .setOrigin(0.5)
 
     const cleared = message === 'VICTORY'
-    const waveReached = Math.min(this.waveIndex + 1, WAVES.length)
+    const waveReached = Math.min(this.waveIndex + 1, this.waves.length)
 
-    submitGameResult({ cleared, waveReached }, this.session.token).catch((error) => {
+    submitGameResult({ levelId: this.levelId, cleared, waveReached }, this.session.token).catch((error) => {
       console.error('Failed to submit game result', error)
     })
   }
@@ -354,7 +393,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private startWave(index: number): void {
-    const wave = WAVES[index]
+    const wave = this.waves[index]
     if (!wave) {
       this.wavesCompleted = true
       return

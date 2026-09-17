@@ -6,14 +6,13 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'level_id', 'nickname', 'cleared', 'wave_reached'])]
-class GameResult extends Model
+#[Fillable(['user_id', 'level_id', 'cleared_at'])]
+class LevelClear extends Model
 {
     protected function casts(): array
     {
         return [
-            'cleared' => 'boolean',
-            'wave_reached' => 'integer',
+            'cleared_at' => 'datetime',
         ];
     }
 
