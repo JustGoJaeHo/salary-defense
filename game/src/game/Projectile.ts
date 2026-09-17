@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { Enemy } from './Enemy'
+import { GAME_COLORS } from '../ui/theme'
 
 const PROJECTILE_SPEED = 400
 const HIT_DISTANCE = 8
@@ -10,7 +11,7 @@ export class Projectile {
   private readonly damage: number
 
   constructor(scene: Phaser.Scene, x: number, y: number, target: Enemy, damage: number) {
-    this.graphic = scene.add.circle(x, y, 4, 0xf1c40f)
+    this.graphic = scene.add.circle(x, y, 4, GAME_COLORS.projectile)
     this.target = target
     this.damage = damage
   }

@@ -114,6 +114,24 @@ Do not continuously send frame-level gameplay state to the server.
 
 Send only data needed for persistence, validation, account features, rankings, statistics, administration, or other server-side requirements.
 
+### UI Graphics
+
+Current UI (panels, modals, buttons, list rows) is drawn with Phaser
+Graphics (`game/src/ui/panel.ts`) rather than image assets, since
+sprite assets are not yet sourced.
+
+`createPanel()` centralizes all drawing logic. Callers (Modal,
+SidePanel, listRow, LobbyScene) only use the returned GameObject for
+positioning and never call Graphics-specific methods (`clear`,
+`fillStyle`, etc.) directly. Keep new UI code going through
+`createPanel()` instead of drawing Graphics ad hoc elsewhere — this is
+what keeps the swap-over point contained to one file.
+
+When sprite assets are available, replace the internal implementation
+in `panel.ts` (e.g. `scene.add.image` or a 9-slice) without changing
+call sites. The hover redraw logic and the `Graphics` return type will
+need updating at that point.
+
 ### Backend
 
 Laravel provides REST APIs for server-side responsibilities required by the product.

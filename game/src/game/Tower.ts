@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { Enemy } from './Enemy'
+import { GAME_COLORS } from '../ui/theme'
 
 const TOWER_RANGE = 140
 const TOWER_DAMAGE = 10
@@ -12,7 +13,7 @@ export class Tower {
   private cooldown = 0
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    this.graphic = scene.add.rectangle(x, y, 28, 28, 0x2ecc71)
+    this.graphic = scene.add.rectangle(x, y, 28, 28, GAME_COLORS.tower)
   }
 
   update(deltaMs: number, enemies: Enemy[]): Enemy | null {

@@ -2,6 +2,8 @@ import Phaser from 'phaser'
 import { loginAsGuest } from '../api/auth'
 import { openGoogleLoginPopup } from '../auth/googleLogin'
 import { loadSession, saveSession, type AuthSession } from '../auth/session'
+import { createPanel } from '../ui/panel'
+import { COLORS, FONT_FAMILY, TEXT_COLORS } from '../ui/theme'
 
 export class AuthScene extends Phaser.Scene {
   private statusText?: Phaser.GameObjects.Text
@@ -11,19 +13,31 @@ export class AuthScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.cameras.main.setBackgroundColor('#1d2230')
+    this.cameras.main.setBackgroundColor(COLORS.background)
 
     this.add
-      .text(this.scale.width / 2, this.scale.height / 2 - 120, 'Salary Defense', {
-        fontSize: '36px',
-        color: '#ffffff',
+      .text(this.scale.width / 2, this.scale.height / 2 - 130, '월급 디펜스', {
+        fontFamily: FONT_FAMILY,
+        fontSize: '34px',
+        fontStyle: '700',
+        color: TEXT_COLORS.primary,
+      })
+      .setOrigin(0.5)
+
+    this.add
+      .text(this.scale.width / 2, this.scale.height / 2 - 90, 'SALARY DEFENSE', {
+        fontFamily: FONT_FAMILY,
+        fontSize: '13px',
+        color: TEXT_COLORS.muted,
+        letterSpacing: 4,
       })
       .setOrigin(0.5)
 
     this.statusText = this.add
       .text(this.scale.width / 2, this.scale.height / 2 + 130, '', {
-        fontSize: '16px',
-        color: '#ff6b6b',
+        fontFamily: FONT_FAMILY,
+        fontSize: '14px',
+        color: TEXT_COLORS.danger,
       })
       .setOrigin(0.5)
 
@@ -39,53 +53,52 @@ export class AuthScene extends Phaser.Scene {
 
   private createWelcomeText(session: AuthSession): void {
     this.add
-      .text(this.scale.width / 2, this.scale.height / 2 - 40, `${session.user.name}님 환영합니다`, {
-        fontSize: '16px',
-        color: '#c7ccd6',
+      .text(this.scale.width / 2, this.scale.height / 2 - 40, `${session.user.name}님, 환영합니다`, {
+        fontFamily: FONT_FAMILY,
+        fontSize: '15px',
+        color: TEXT_COLORS.muted,
       })
       .setOrigin(0.5)
   }
 
   private createEnterButton(): void {
-    const width = 220
-    const height = 52
     const x = this.scale.width / 2
     const y = this.scale.height / 2
-
-    const background = this.add.rectangle(x, y, width, height, 0x2ecc71, 0.9)
-    background.setStrokeStyle(1, 0x4a5468)
-    background.setInteractive({ useHandCursor: true })
-    background.on('pointerdown', () => this.scene.start('Lobby'))
-
-    this.add.text(x, y, '접속하기', { fontSize: '20px', color: '#0f1115' }).setOrigin(0.5)
+    this.createButton(x, y, '입장하기', 'primary', () => this.scene.start('Lobby'))
   }
 
   private createGuestButton(): void {
-    const width = 220
-    const height = 52
     const x = this.scale.width / 2
     const y = this.scale.height / 2
-
-    const background = this.add.rectangle(x, y, width, height, 0x2ecc71, 0.9)
-    background.setStrokeStyle(1, 0x4a5468)
-    background.setInteractive({ useHandCursor: true })
-    background.on('pointerdown', () => this.handleGuestLogin())
-
-    this.add.text(x, y, '게스트로 시작', { fontSize: '20px', color: '#0f1115' }).setOrigin(0.5)
+    this.createButton(x, y, '게스트로 시작', 'primary', () => this.handleGuestLogin())
   }
 
   private createGoogleButton(): void {
-    const width = 220
-    const height = 52
     const x = this.scale.width / 2
     const y = this.scale.height / 2 + 72
+    this.createButton(x, y, 'Google로 로그인', 'secondary', () => this.handleGoogleLogin())
+  }
 
-    const background = this.add.rectangle(x, y, width, height, 0x2f3644, 0.9)
-    background.setStrokeStyle(1, 0x4a5468)
-    background.setInteractive({ useHandCursor: true })
-    background.on('pointerdown', () => this.handleGoogleLogin())
+  private createButton(x: number, y: number, label: string, variant: 'primary' | 'secondary', onClick: () => void): void {
+    const width = 220
+    const height = 52
 
-    this.add.text(x, y, '구글로 로그인', { fontSize: '20px', color: '#ffffff' }).setOrigin(0.5)
+    const { hitArea } = createPanel(this, x, y, width, height, {
+      fillColor: variant === 'primary' ? COLORS.accent : COLORS.surfaceAlt,
+      borderColor: variant === 'primary' ? COLORS.accent : COLORS.border,
+      radius: 10,
+      interactive: true,
+    })
+    hitArea?.on('pointerdown', () => onClick())
+
+    this.add
+      .text(x, y, label, {
+        fontFamily: FONT_FAMILY,
+        fontSize: '17px',
+        fontStyle: '600',
+        color: variant === 'primary' ? TEXT_COLORS.onAccent : TEXT_COLORS.primary,
+      })
+      .setOrigin(0.5)
   }
 
   private async handleGuestLogin(): Promise<void> {
