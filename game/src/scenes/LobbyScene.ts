@@ -3,20 +3,20 @@ import { fetchGoogleLinkTicket, UnauthorizedError } from '../api/auth'
 import { fetchStages, type Stage } from '../api/stages'
 import { openGoogleLoginPopup } from '../auth/googleLogin'
 import { clearSession, loadSession, saveSession, type AuthSession } from '../auth/session'
+import { stageSceneKey } from './StageScene'
+import { TransitionScene, TRANSITION_SCENE_KEY } from './TransitionScene'
 import { Modal } from '../ui/Modal'
-import { createPanel } from '../ui/panel'
+import { createPanel, onTap } from '../ui/panel'
+import { renderListRow, type ListRowStatus } from '../ui/listRow'
 import { SidePanel, type SidePanelItem } from '../ui/SidePanel'
-import { COLORS, TEXT_COLORS } from '../ui/theme'
-
-const DOOR_LOADING_DELAY_MS = 2000
-
-type PhaserPointerEvent = Phaser.Types.Input.EventData
+import { COLORS, FONT_FAMILY, TEXT_COLORS } from '../ui/theme'
 
 export class LobbyScene extends Phaser.Scene {
   private session!: AuthSession
   private modal!: Modal
   private rightPanel!: SidePanel
   private leftPanel!: SidePanel
+  private transition!: TransitionScene
   private doorStages: Stage[] = []
   private doorRequestId = 0
 
@@ -31,6 +31,7 @@ export class LobbyScene extends Phaser.Scene {
       return
     }
     this.session = session
+    this.transition = this.scene.get<TransitionScene>(TRANSITION_SCENE_KEY)
 
     this.modal = new Modal(this)
     this.rightPanel = new SidePanel(this, 'right')
@@ -40,25 +41,28 @@ export class LobbyScene extends Phaser.Scene {
 
     this.createHeader()
     this.createRoom()
+    this.transition.reveal()
   }
 
   private createHeader(): void {
-    const status = this.session.user.is_guest ? '게스트로 플레이 중' : '구글 계정으로 로그인됨'
+    const status = this.session.user.is_guest ? '게스트 계정' : 'Google 계정 연동됨'
 
     this.add
       .text(this.scale.width / 2, 36, `${this.session.user.name}의 방`, {
-        fontSize: '22px',
+        fontFamily: FONT_FAMILY,
+        fontSize: '21px',
+        fontStyle: '700',
         color: TEXT_COLORS.primary,
       })
       .setOrigin(0.5)
 
     this.add
-      .text(this.scale.width / 2, 64, status, { fontSize: '13px', color: TEXT_COLORS.muted })
+      .text(this.scale.width / 2, 64, status, { fontFamily: FONT_FAMILY, fontSize: '12px', color: TEXT_COLORS.muted })
       .setOrigin(0.5)
   }
 
   private createRoom(): void {
-    this.createRoomZone(130, 190, 170, 150, '문', () => this.openDoorModal(), (container, width, height) => {
+    this.createRoomZone(130, 190, 170, 150, '방문', () => this.openDoorModal(), (container, width, height) => {
       const panel = this.add.rectangle(0, -6, width - 50, height - 60, COLORS.surfaceAlt).setStrokeStyle(1, COLORS.border)
       const handle = this.add.circle(width / 2 - 42, -6, 5, COLORS.accent)
       container.add([panel, handle])
@@ -109,20 +113,18 @@ export class LobbyScene extends Phaser.Scene {
       borderColor: COLORS.border,
       radius: 20,
       interactive: true,
+      hoverBorderColor: COLORS.accent,
     })
 
     const decorContainer = this.add.container(x, y)
     decorate(decorContainer, width, height)
 
     const labelText = this.add
-      .text(0, height / 2 - 20, label, { fontSize: '14px', color: TEXT_COLORS.muted })
+      .text(0, height / 2 - 20, label, { fontFamily: FONT_FAMILY, fontSize: '13px', color: TEXT_COLORS.muted })
       .setOrigin(0.5)
     decorContainer.add(labelText)
 
-    hitArea?.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: PhaserPointerEvent) => {
-      event.stopPropagation()
-      onClick()
-    })
+    if (hitArea) onTap(hitArea, onClick)
   }
 
   private openRightPanel(): void {
@@ -135,7 +137,7 @@ export class LobbyScene extends Phaser.Scene {
         },
       },
       {
-        label: '우편함',
+        label: '메일함',
         onClick: () => {
           this.rightPanel.close()
           this.openPlaceholderModal()
@@ -176,7 +178,7 @@ export class LobbyScene extends Phaser.Scene {
         },
       },
       {
-        label: '인벤토리',
+        label: '보관함',
         onClick: () => {
           this.leftPanel.close()
           this.openPlaceholderModal()
@@ -188,21 +190,24 @@ export class LobbyScene extends Phaser.Scene {
 
   private openPlaceholderModal(): void {
     this.modal.open(300, 180, (content) => {
-      const text = this.add.text(0, 0, '준비중입니다.', { fontSize: '18px', color: TEXT_COLORS.primary }).setOrigin(0.5)
+      const text = this.add
+        .text(0, 0, '준비중인 기능입니다.', { fontFamily: FONT_FAMILY, fontSize: '16px', color: TEXT_COLORS.primary })
+        .setOrigin(0.5)
       content.add(text)
     })
   }
 
   private openSettingsModal(): void {
     this.modal.open(300, 220, (content) => {
-      const title = this.add.text(0, -60, '설정', { fontSize: '20px', color: TEXT_COLORS.primary }).setOrigin(0.5)
+      const title = this.add
+        .text(0, -60, '설정', { fontFamily: FONT_FAMILY, fontSize: '19px', fontStyle: '700', color: TEXT_COLORS.primary })
+        .setOrigin(0.5)
 
       const logoutButton = this.add
-        .text(0, 10, '로그아웃', { fontSize: '18px', color: TEXT_COLORS.danger })
+        .text(0, 10, '로그아웃', { fontFamily: FONT_FAMILY, fontSize: '16px', color: TEXT_COLORS.danger })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
-      logoutButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: PhaserPointerEvent) => {
-        event.stopPropagation()
+      onTap(logoutButton, () => {
         clearSession()
         this.scene.start('Auth')
       })
@@ -213,12 +218,15 @@ export class LobbyScene extends Phaser.Scene {
 
   private openProfileModal(): void {
     this.modal.open(340, 260, (content) => {
-      const title = this.add.text(0, -90, '프로필', { fontSize: '20px', color: TEXT_COLORS.primary }).setOrigin(0.5)
+      const title = this.add
+        .text(0, -90, '프로필', { fontFamily: FONT_FAMILY, fontSize: '19px', fontStyle: '700', color: TEXT_COLORS.primary })
+        .setOrigin(0.5)
 
-      const status = this.session.user.is_guest ? '게스트로 플레이 중' : '구글 계정으로 로그인됨'
+      const status = this.session.user.is_guest ? '게스트 계정' : 'Google 계정 연동됨'
       const info = this.add
         .text(0, -40, `${this.session.user.name}\n${status}`, {
-          fontSize: '15px',
+          fontFamily: FONT_FAMILY,
+          fontSize: '14px',
           color: TEXT_COLORS.muted,
           align: 'center',
         })
@@ -229,16 +237,15 @@ export class LobbyScene extends Phaser.Scene {
       if (!this.session.user.is_guest) return
 
       const linkButton = this.add
-        .text(0, 40, '구글 계정 연동', { fontSize: '16px', color: TEXT_COLORS.link })
+        .text(0, 40, 'Google 계정 연동', { fontFamily: FONT_FAMILY, fontSize: '15px', color: TEXT_COLORS.link })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true })
 
-      const statusText = this.add.text(0, 80, '', { fontSize: '13px', color: TEXT_COLORS.danger }).setOrigin(0.5)
+      const statusText = this.add
+        .text(0, 80, '', { fontFamily: FONT_FAMILY, fontSize: '12px', color: TEXT_COLORS.danger })
+        .setOrigin(0.5)
 
-      linkButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: PhaserPointerEvent) => {
-        event.stopPropagation()
-        this.handleGoogleLink(statusText)
-      })
+      onTap(linkButton, () => this.handleGoogleLink(statusText))
 
       content.add([linkButton, statusText])
     })
@@ -257,47 +264,44 @@ export class LobbyScene extends Phaser.Scene {
         return
       }
 
-      const message = error instanceof Error ? error.message : '구글 계정 연동 중 오류가 발생했습니다.'
+      const message = error instanceof Error ? error.message : 'Google 계정 연동 중 오류가 발생했습니다.'
       statusText.setText(message)
     }
   }
 
   private openDoorModal(): void {
     const requestId = ++this.doorRequestId
-    this.modal.open(480, 620, (content) => this.renderDoorLoading(content, requestId))
+    this.modal.open(480, 620, (content) => this.loadDoorStages(content, requestId))
   }
 
-  private renderDoorLoading(content: Phaser.GameObjects.Container, requestId: number): void {
-    const spinner = this.add.text(0, -30, '⟳', { fontSize: '48px', color: TEXT_COLORS.primary }).setOrigin(0.5)
-    const label = this.add.text(0, 40, '불러오는 중...', { fontSize: '15px', color: TEXT_COLORS.muted }).setOrigin(0.5)
-    content.add([spinner, label])
+  private loadDoorStages(content: Phaser.GameObjects.Container, requestId: number): void {
+    const label = this.add
+      .text(0, 0, '불러오는 중', { fontFamily: FONT_FAMILY, fontSize: '14px', color: TEXT_COLORS.muted })
+      .setOrigin(0.5)
+    content.add(label)
 
-    const spinTween = this.tweens.add({ targets: spinner, angle: 360, duration: 900, repeat: -1 })
-    const stagesPromise = fetchStages(this.session.token)
-
-    this.time.delayedCall(DOOR_LOADING_DELAY_MS, () => {
-      if (requestId !== this.doorRequestId || !this.modal.isOpen) return
-      spinTween.stop()
-
-      stagesPromise
-        .then((stages) => {
-          if (requestId !== this.doorRequestId || !this.modal.isOpen) return
-          this.doorStages = stages
-          content.removeAll(true)
-          this.renderStageList(content)
-        })
-        .catch((error: unknown) => {
-          if (requestId !== this.doorRequestId || !this.modal.isOpen) return
-          content.removeAll(true)
-          const message = error instanceof Error ? error.message : '맵 목록을 불러오지 못했습니다.'
-          const errorText = this.add.text(0, 0, message, { fontSize: '14px', color: TEXT_COLORS.danger }).setOrigin(0.5)
-          content.add(errorText)
-        })
-    })
+    fetchStages(this.session.token)
+      .then((stages) => {
+        if (requestId !== this.doorRequestId || !this.modal.isOpen) return
+        this.doorStages = stages
+        content.removeAll(true)
+        this.renderStageList(content)
+      })
+      .catch((error: unknown) => {
+        if (requestId !== this.doorRequestId || !this.modal.isOpen) return
+        content.removeAll(true)
+        const message = error instanceof Error ? error.message : '스테이지 목록을 불러오지 못했습니다.'
+        const errorText = this.add
+          .text(0, 0, message, { fontFamily: FONT_FAMILY, fontSize: '13px', color: TEXT_COLORS.danger })
+          .setOrigin(0.5)
+        content.add(errorText)
+      })
   }
 
   private renderStageList(content: Phaser.GameObjects.Container): void {
-    const title = this.add.text(0, -270, '맵 선택', { fontSize: '22px', color: TEXT_COLORS.primary }).setOrigin(0.5)
+    const title = this.add
+      .text(0, -270, '스테이지 선택', { fontFamily: FONT_FAMILY, fontSize: '20px', fontStyle: '700', color: TEXT_COLORS.primary })
+      .setOrigin(0.5)
     content.add(title)
 
     const startY = -210
@@ -306,74 +310,18 @@ export class LobbyScene extends Phaser.Scene {
     this.doorStages.forEach((stage, index) => {
       const y = startY + index * rowHeight
       const cleared = stage.levels.length > 0 && stage.levels.every((level) => level.cleared)
-      const status = !stage.unlocked ? '🔒' : cleared ? '✅' : ''
+      const status: ListRowStatus = !stage.unlocked
+        ? { label: '잠김', tone: 'muted' }
+        : cleared
+          ? { label: '완료', tone: 'success' }
+          : null
 
-      this.renderRow(content, y, stage.name, status, stage.unlocked, () => this.renderLevelList(content, stage))
+      renderListRow(this, content, y, stage.name, status, stage.unlocked, () => this.goToStage(stage))
     })
   }
 
-  private renderLevelList(content: Phaser.GameObjects.Container, stage: Stage): void {
-    content.removeAll(true)
-
-    const backButton = this.add
-      .text(-210, -270, '< 뒤로', { fontSize: '14px', color: TEXT_COLORS.link })
-      .setOrigin(0, 0.5)
-      .setInteractive({ useHandCursor: true })
-    backButton.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: PhaserPointerEvent) => {
-      event.stopPropagation()
-      content.removeAll(true)
-      this.renderStageList(content)
-    })
-
-    const title = this.add.text(0, -270, stage.name, { fontSize: '22px', color: TEXT_COLORS.primary }).setOrigin(0.5)
-    content.add([backButton, title])
-
-    const startY = -210
-    const rowHeight = 68
-
-    stage.levels.forEach((level, index) => {
-      const y = startY + index * rowHeight
-      const status = !level.unlocked ? '🔒' : level.cleared ? '✅' : ''
-
-      this.renderRow(content, y, level.name, status, level.unlocked, () => {
-        this.modal.close()
-        this.scene.start('Main', { levelId: level.id })
-      })
-    })
-  }
-
-  private renderRow(
-    content: Phaser.GameObjects.Container,
-    y: number,
-    label: string,
-    status: string,
-    unlocked: boolean,
-    onClick: () => void,
-  ): void {
-    const { graphics, hitArea } = createPanel(this, 0, y, 420, 56, {
-      fillColor: unlocked ? COLORS.surfaceAlt : COLORS.surface,
-      fillAlpha: unlocked ? 1 : 0.5,
-      radius: 14,
-      interactive: unlocked,
-    })
-    content.add(graphics)
-
-    const labelText = this.add
-      .text(-180, y, label, { fontSize: '17px', color: unlocked ? TEXT_COLORS.primary : TEXT_COLORS.muted })
-      .setOrigin(0, 0.5)
-    content.add(labelText)
-
-    if (status) {
-      const statusText = this.add.text(180, y, status, { fontSize: '16px', color: TEXT_COLORS.muted }).setOrigin(1, 0.5)
-      content.add(statusText)
-    }
-
-    if (!hitArea) return
-
-    content.add(hitArea)
-    hitArea.on('pointerdown', (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: PhaserPointerEvent) => {
-      event.stopPropagation()
-      onClick()
-    })
+  private goToStage(stage: Stage): void {
+    this.modal.close()
+    this.transition.cover(() => this.scene.start(stageSceneKey(stage.key), { stage }))
   }
 }

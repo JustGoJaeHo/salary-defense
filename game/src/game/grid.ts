@@ -1,13 +1,15 @@
 import type { Point } from './path'
 
-export const GRID_SIZE = 40
+// 현재 필드 영역(가로 540px, 세로 850px) 기준으로 가로 10칸 x 세로 16칸이 나오도록 역산한 값이다.
+export const GRID_SIZE = 53
 
-export function snapToGrid(x: number, y: number): Point {
-  const col = Math.floor(x / GRID_SIZE)
-  const row = Math.floor(y / GRID_SIZE)
+/** offsetX/offsetY는 플레이 필드의 좌측(fieldLeft)/상단(fieldTop)에 격자를 맞추기 위한 값이다. */
+export function snapToGrid(x: number, y: number, offsetX = 0, offsetY = 0): Point {
+  const col = Math.floor((x - offsetX) / GRID_SIZE)
+  const row = Math.floor((y - offsetY) / GRID_SIZE)
   return {
-    x: col * GRID_SIZE + GRID_SIZE / 2,
-    y: row * GRID_SIZE + GRID_SIZE / 2,
+    x: offsetX + col * GRID_SIZE + GRID_SIZE / 2,
+    y: offsetY + row * GRID_SIZE + GRID_SIZE / 2,
   }
 }
 

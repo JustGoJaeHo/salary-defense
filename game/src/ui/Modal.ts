@@ -1,11 +1,13 @@
 import Phaser from 'phaser'
-import { createPanel } from './panel'
-import { COLORS, TEXT_COLORS } from './theme'
+import { createPanel, onTap } from './panel'
+import { COLORS, FONT_FAMILY, TEXT_COLORS } from './theme'
 
 const OVERLAY_ALPHA = 0.6
+const OPEN_DURATION = 200
+const CLOSE_DURATION = 160
 
 /**
- * 화면 중앙에 뜨는 재사용 가능한 모달. 오른쪽 위 X 버튼으로만 닫힌다.
+ * 화면 중앙에 뜨는 재사용 가능한 모달. X 버튼 또는 바깥 영역 클릭으로 닫힌다.
  */
 export class Modal {
   private scene: Phaser.Scene
@@ -21,7 +23,7 @@ export class Modal {
   }
 
   open(width: number, height: number, build: (content: Phaser.GameObjects.Container) => void): void {
-    this.close()
+    this.destroyImmediate()
 
     const { width: screenWidth, height: screenHeight } = this.scene.scale
     const centerX = screenWidth / 2
@@ -29,41 +31,71 @@ export class Modal {
 
     this.overlay = this.scene.add.rectangle(centerX, centerY, screenWidth, screenHeight, 0x000000, OVERLAY_ALPHA)
     this.overlay.setDepth(2000)
+    this.overlay.setAlpha(0)
     this.overlay.setInteractive()
-    this.overlay.on(
-      'pointerdown',
-      (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-        event.stopPropagation()
-      },
-    )
+    onTap(this.overlay, () => this.close())
+    this.scene.tweens.add({ targets: this.overlay, alpha: 1, duration: OPEN_DURATION, ease: 'Quad.easeOut' })
 
-    const { graphics: background } = createPanel(this.scene, 0, 0, width, height, {
+    const { graphics: background, hitArea } = createPanel(this.scene, 0, 0, width, height, {
       fillColor: COLORS.surface,
       borderColor: COLORS.border,
-      radius: 20,
+      radius: 16,
+      interactive: true,
+      useHandCursor: false,
     })
+    if (hitArea) onTap(hitArea, () => {})
 
     const closeButton = this.scene.add
-      .text(width / 2 - 26, -height / 2 + 26, '✕', { fontSize: '20px', color: TEXT_COLORS.muted })
+      .text(width / 2 - 26, -height / 2 + 26, '✕', {
+        fontFamily: FONT_FAMILY,
+        fontSize: '18px',
+        color: TEXT_COLORS.muted,
+      })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
-    closeButton.on(
-      'pointerdown',
-      (_pointer: Phaser.Input.Pointer, _localX: number, _localY: number, event: Phaser.Types.Input.EventData) => {
-        event.stopPropagation()
-        this.close()
-      },
-    )
+    onTap(closeButton, () => this.close())
 
     const content = this.scene.add.container(0, 0)
 
-    this.panel = this.scene.add.container(centerX, centerY, [background, content, closeButton])
+    const panelParts: Phaser.GameObjects.GameObject[] = [background, content, closeButton]
+    if (hitArea) panelParts.splice(1, 0, hitArea)
+    this.panel = this.scene.add.container(centerX, centerY, panelParts)
     this.panel.setDepth(2001)
+    this.panel.setScale(0.92)
+    this.panel.setAlpha(0)
+    this.scene.tweens.add({ targets: this.panel, scale: 1, alpha: 1, duration: OPEN_DURATION, ease: 'Quad.easeOut' })
 
     build(content)
   }
 
   close(): void {
+    const panel = this.panel
+    const overlay = this.overlay
+    if (!panel) return
+
+    this.panel = undefined
+    this.overlay = undefined
+
+    this.scene.tweens.add({
+      targets: panel,
+      scale: 0.92,
+      alpha: 0,
+      duration: CLOSE_DURATION,
+      ease: 'Quad.easeIn',
+      onComplete: () => panel.destroy(),
+    })
+    if (overlay) {
+      this.scene.tweens.add({
+        targets: overlay,
+        alpha: 0,
+        duration: CLOSE_DURATION,
+        ease: 'Quad.easeIn',
+        onComplete: () => overlay.destroy(),
+      })
+    }
+  }
+
+  private destroyImmediate(): void {
     this.overlay?.destroy()
     this.panel?.destroy()
     this.overlay = undefined

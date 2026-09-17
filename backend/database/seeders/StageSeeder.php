@@ -25,11 +25,11 @@ class StageSeeder extends Seeder
             ['key' => 'global', 'name' => '글로벌'],
         ];
 
-        // 초기 웨이브 구성은 기존 게임의 3웨이브를 그대로 스캐폴드로 사용한다
+        // 초기 웨이브 구성은 기존 게임의 3웨이브를 그대로 스캐폴드로 사용한다 (웨이브당 등장 수는 기존의 1.5배)
         $defaultWaves = [
-            ['enemyCount' => 5, 'spawnInterval' => 1000],
-            ['enemyCount' => 8, 'spawnInterval' => 800],
-            ['enemyCount' => 12, 'spawnInterval' => 600],
+            ['enemyCount' => 8, 'spawnInterval' => 1000],
+            ['enemyCount' => 12, 'spawnInterval' => 800],
+            ['enemyCount' => 18, 'spawnInterval' => 600],
         ];
 
         foreach ($stages as $index => $stageData) {
